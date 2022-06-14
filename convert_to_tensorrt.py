@@ -16,12 +16,15 @@ import matplotlib as mpl
 import matplotlib.cm as cm
 
 import torch
+import torch.onnx
 from torchvision import transforms, datasets
+from torchsummary import summary
 
 import networks
 from layers import disp_to_depth
 from utils import download_model_if_doesnt_exist
 from evaluate_depth import STEREO_SCALE_FACTOR
+from torch2trt import torch2trt
 
 
 def parse_args():
@@ -46,7 +49,9 @@ def parse_args():
     return parser.parse_args()
 
 
-def convertToTensorrt(args):
+
+def convert_to_tensorrt(args):
+
     """Function to convert to tensorrt
     """
 
@@ -76,81 +81,88 @@ def convertToTensorrt(args):
 
     print("   Loading pretrained decoder")
     depth_decoder = networks.DepthDecoder(
-        num_ch_enc=encoder.num_ch_enc, scales=range(4))
+        num_ch_enc=encoder.num_ch_enc, scales=range(4)) #TODO setting skips to false and commenting out the model loading (line 85) fixes one control flow error, but others are still present.
 
     loaded_dict = torch.load(depth_decoder_path, map_location=device)
     depth_decoder.load_state_dict(loaded_dict)
 
     depth_decoder.to(device)
-    depth_decoder.eval()
+    depth_decoder.eval().cuda()
 
-    # FINDING INPUT IMAGES
-    if os.path.isfile(args.image_path):
-        # Only testing on a single image
-        paths = [args.image_path]
-        output_directory = os.path.dirname(args.image_path)
-    elif os.path.isdir(args.image_path):
-        # Searching folder for images
-        paths = glob.glob(os.path.join(args.image_path, '*.{}'.format(args.ext)))
-        output_directory = args.image_path
-    else:
-        raise Exception("Can not find args.image_path: {}".format(args.image_path))
 
-    print("-> Predicting on {:d} test images".format(len(paths)))
+    # CONVERT TO TENSORRT AND SAVE
+    print("converting to tensorrt")
 
-    # PREDICTING ON EACH IMAGE IN TURN
     with torch.no_grad():
-        for idx, image_path in enumerate(paths):
 
-            if image_path.endswith("_disp.jpg"):
-                # don't try to predict disparity for a disparity image!
-                continue
+        #merge models
+        merged = networks.MergedModel(encoder, depth_decoder) #MergedModels executes the second model with the output of the first
 
-            # Load image and preprocess
-            input_image = pil.open(image_path).convert('RGB')
-            original_width, original_height = input_image.size
-            input_image = input_image.resize((feed_width, feed_height), pil.LANCZOS)
-            input_image = transforms.ToTensor()(input_image).unsqueeze(0)
+        #load input shapes
+        encoder_input_shape = (1, 3, feed_height, feed_width) #tuple(next(encoder.parameters()).size())
+        depth_decoder_input_shape = (256, 512, 3, 3)#tuple(next(depth_decoder.parameters()).size()) #TODO for some reason this is always inaccurate
 
-            # PREDICTION
-            input_image = input_image.to(device)
-            features = encoder(input_image)
-            outputs = depth_decoder(features)
+        # example data to feed conversion
+        encoder_ones = torch.ones(encoder_input_shape).cuda()
+        decoder_ones = torch.ones(depth_decoder_input_shape).cuda()
 
-            disp = outputs[("disp", 0)]
-            disp_resized = torch.nn.functional.interpolate(
-                disp, (original_height, original_width), mode="bilinear", align_corners=False)
+        print("model input shape: ", encoder_ones.shape)
 
-            # Saving numpy file
-            output_name = os.path.splitext(os.path.basename(image_path))[0]
-            scaled_disp, depth = disp_to_depth(disp, 0.1, 100)
-            if args.pred_metric_depth:
-                name_dest_npy = os.path.join(output_directory, "{}_depth.npy".format(output_name))
-                metric_depth = STEREO_SCALE_FACTOR * depth.cpu().numpy()
-                np.save(name_dest_npy, metric_depth)
-            else:
-                name_dest_npy = os.path.join(output_directory, "{}_disp.npy".format(output_name))
-                np.save(name_dest_npy, scaled_disp.cpu().numpy())
 
-            # Saving colormapped depth image
-            disp_resized_np = disp_resized.squeeze().cpu().numpy()
-            vmax = np.percentile(disp_resized_np, 95)
-            normalizer = mpl.colors.Normalize(vmin=disp_resized_np.min(), vmax=vmax)
-            mapper = cm.ScalarMappable(norm=normalizer, cmap='magma')
-            colormapped_im = (mapper.to_rgba(disp_resized_np)[:, :, :3] * 255).astype(np.uint8)
-            im = pil.fromarray(colormapped_im)
+        # print("model summary: ")
+        # summary(merged, encoder_input_shape) #TODO fails because of input shape
 
-            name_dest_im = os.path.join(output_directory, "{}_disp.jpeg".format(output_name))
-            im.save(name_dest_im)
+        #save to onnx
+        #torch.onnx.export(encoder, encoder_ones, os.path.join(model_path, "encoder.onnx"), verbose=True)
+        #torch.onnx.export(depth_decoder, decoder_ones, os.path.join(model_path, "depth.onnx"), verbose=False) #TODO this fails because the decoder doesn't work with the tracing conversion
 
-            print("   Processed {:d} of {:d} images - saved predictions to:".format(
-                idx + 1, len(paths)))
-            print("   - {}".format(name_dest_im))
-            print("   - {}".format(name_dest_npy))
+        #torch.onnx.export(merged, encoder_ones, os.path.join(model_path, "merged.onnx"), verbose=False)
+
+        #convert to tensorrt
+        encoder_trt = torch2trt(encoder, [encoder_ones])
+        # decoder_trt = torch2trt(depth_decoder, [decoder_ones) #TODO can't get the input shape right for some reason. Merged model is preferred.
+
+        merged_trt = torch2trt(merged, [encoder_ones])
+
+
+    print("saving engine file")
+
+    merged_trt_path = os.path.join(model_path, "merged.engine")
+    with open(merged_trt_path, "wb") as f:
+        f.write(merged_trt.engine.serialize())
+
+
+    print("Testing model")
+
+    # TEST TENSORT MODEL
+
+    # Load image and preprocess
+    input_image = pil.open("assets/test_image.jpg").convert('RGB')
+    original_width, original_height = input_image.size
+    input_image = input_image.resize((feed_width, feed_height), pil.LANCZOS)
+    input_image = transforms.ToTensor()(input_image).unsqueeze(0)
+
+    # prediction
+    input_image = input_image.to(device)
+
+    outputs = merged_trt(input_image)
+
+    disp = outputs[0]
+    disp_resized = torch.nn.functional.interpolate(
+        disp, (original_height, original_width), mode="bilinear", align_corners=False)
+
+    # Saving colormapped depth image
+    disp_resized_np = disp_resized.squeeze().cpu().numpy()
+    vmax = np.percentile(disp_resized_np, 95)
+    normalizer = mpl.colors.Normalize(vmin=disp_resized_np.min(), vmax=vmax)
+    mapper = cm.ScalarMappable(norm=normalizer, cmap='magma')
+    colormapped_im = (mapper.to_rgba(disp_resized_np)[:, :, :3] * 255).astype(np.uint8)
+    im = pil.fromarray(colormapped_im)
+    im.save("assets/test_disp.jpg")
 
     print('-> Done!')
 
 
 if __name__ == '__main__':
     args = parse_args()
-    test_simple(args)
+    convert_to_tensorrt(args)
