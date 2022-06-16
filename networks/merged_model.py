@@ -8,7 +8,7 @@ class MergedModel(nn.Module):
         self.modelA = modelA
         self.modelB = modelB
 
-    def forward(self, x, ):
+    def forward(self, x):
         x = self.modelA(x)
         x = self.modelB(x)
 

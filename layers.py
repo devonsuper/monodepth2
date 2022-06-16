@@ -7,11 +7,17 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from itertools import repeat
 
+
+def _ntuple(n):
+    def parse(x):
+        return tuple(repeat(x, n))
+
+    return parse
 
 def disp_to_depth(disp, min_depth, max_depth):
     """Convert network's sigmoid output into depth prediction
@@ -124,14 +130,15 @@ class Conv3x3(nn.Module):
     def __init__(self, in_channels, out_channels, use_refl=True):
         super(Conv3x3, self).__init__()
 
-        if use_refl:
-            self.pad = nn.ReflectionPad2d(1)
-        else:
-            self.pad = nn.ZeroPad2d(1)
+        # if use_refl:
+        #     self.pad = nn.ReflectionPad2d(1)
+        # else:
+        #     self.pad = nn.ZeroPad2d(1)
         self.conv = nn.Conv2d(int(in_channels), int(out_channels), 3)
 
     def forward(self, x):
-        out = self.pad(x)
+        #removed control flow and changed function to make compatible with onnx and tensorrt. Should function exactly the same
+        out = nn.functional.pad(x, _ntuple(4)(1), "reflect") #self.pad(x)
         out = self.conv(out)
         return out
 
