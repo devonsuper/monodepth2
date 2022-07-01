@@ -80,7 +80,7 @@ def convert_to_tensorrt(args):
 
     print("   Loading pretrained decoder")
     depth_decoder = networks.NCFDepthDecoder(
-        num_ch_enc=encoder.num_ch_enc, scales=range(4) ) #TODO setting skips to false and commenting out the model loading (line 85) fixes one control flow error, but others are still present.
+        num_ch_enc=encoder.num_ch_enc, scales=range(4) )
 
     loaded_dict = torch.load(depth_decoder_path, map_location=device)
     depth_decoder.load_state_dict(loaded_dict)
@@ -106,7 +106,8 @@ def convert_to_tensorrt(args):
         export_path = model_path = os.path.join("exports", args.model_name)
 
         #merge models
-        merged = networks.MergedModel(encoder, depth_decoder) #MergedModels executes the second model with the output of the first
+        #output index of 0 represents highest scale
+        merged = networks.MergedModel(encoder, depth_decoder, 0) #MergedModels executes the second model with the output of the first
 
         #load input shapes
         encoder_input_shape = (1, 3, feed_height, feed_width) #tuple(next(encoder.parameters()).size())
@@ -123,7 +124,7 @@ def convert_to_tensorrt(args):
         #torch.onnx.export(encoder, encoder_ones, os.path.join(export_path, "encoder.onnx"), verbose=True, opset_version=15)
         #torch.onnx.export(depth_decoder, decoder_ones, os.path.join(export_path, "depth.onnx"), verbose=True) #TODO create wrapper to handle multiple inputs
 
-        torch.onnx.export(merged, encoder_ones, os.path.join(export_path, "merged.onnx"), verbose=True, opset_version=15, input_names=["input"])
+        torch.onnx.export(merged, encoder_ones, os.path.join(export_path, "merged.onnx"), verbose=True, opset_version=15, input_names=["input"], output_names=["output"])
 
         print("finished onnx export")
 
