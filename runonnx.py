@@ -84,7 +84,7 @@ def main(args):
 
     #run onnx
 
-    ort_sess = ort.InferenceSession("exports/" + args.model_name + "/merged.onnx", providers=['TensorrtExecutionProvider', 'CUDAExecutionProvider', 'CPUExecutionProvider'])
+    ort_sess = ort.InferenceSession("exports/" + args.model_name + "/" + args.model_name + "simplified.onnx", providers=['TensorrtExecutionProvider', 'CUDAExecutionProvider', 'CPUExecutionProvider'])
     outputs = ort_sess.run(None, {'input': input_image.numpy()})
 
     #test image

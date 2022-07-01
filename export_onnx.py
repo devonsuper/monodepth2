@@ -25,6 +25,8 @@ from evaluate_depth import STEREO_SCALE_FACTOR
 from layers import disp_to_depth
 from utils import download_model_if_doesnt_exist
 
+from onnxsim import simplify
+import onnx
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -49,11 +51,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def convert_to_tensorrt(args):
-
-    """Function to convert to tensorrt
-    """
-
+def load_pretrained():
     if torch.cuda.is_available() and not args.no_cuda:
         device = torch.device("cuda")
     else:
@@ -79,7 +77,7 @@ def convert_to_tensorrt(args):
     encoder.eval()
 
     print("   Loading pretrained decoder")
-    depth_decoder = networks.NCFDepthDecoder(
+    depth_decoder = networks.NCFDepthDecoder( #NCF - No Control Flow for onnx conversion
         num_ch_enc=encoder.num_ch_enc, scales=range(4) )
 
     loaded_dict = torch.load(depth_decoder_path, map_location=device)
@@ -88,86 +86,61 @@ def convert_to_tensorrt(args):
     depth_decoder.to(device)
     depth_decoder.eval().cuda()
 
-    # Load image and preprocess
-    input_image = pil.open("assets/test_image.jpg").convert('RGB')
-    original_width, original_height = input_image.size
-    input_image = input_image.resize((feed_width, feed_height), pil.LANCZOS)
-    input_image = transforms.ToTensor()(input_image).unsqueeze(0)
+    return encoder, depth_decoder, feed_height, feed_width
 
-    # prediction
-    input_image = input_image.to(device)
-    input_image = input_image.contiguous()  # from https://github.com/NVIDIA-AI-IOT/torch2trt/issues/220#issuecomment-569949961
 
-    # CONVERT TO TENSORRT AND SAVE
-    print("converting to tensorrt")
+# ACCEPTS MODEL_NAME, LOADED ENCODER AND DECODER ALONG WITH INPUT HEIGHT AND WIDTH AND EXPORTS ONNX MODEL
+def convert_to_onnx(model_name, encoder, depth_decoder, height, width):
+
+    """Function to convert to onnx
+    """
+    # CONVERT TO ONNX AND SAVE
+    print("converting to onnx")
 
     with torch.no_grad():
 
-        export_path = model_path = os.path.join("exports", args.model_name)
+        export_path = model_path = os.path.join("exports", model_name)
 
         #merge models
         #output index of 0 represents highest scale
         merged = networks.MergedModel(encoder, depth_decoder, 0) #MergedModels executes the second model with the output of the first
 
         #load input shapes
-        encoder_input_shape = (1, 3, feed_height, feed_width) #tuple(next(encoder.parameters()).size())
-        depth_decoder_input_shape = (256, 512, 3, 3)#tuple(next(depth_decoder.parameters()).size()) #TODO for some reason this is always inaccurate
+        encoder_input_shape = (1, 3, height, width) #tuple(next(encoder.parameters()).size())
 
         # example data to feed conversion
         encoder_ones = torch.ones(encoder_input_shape).cuda().contiguous()
-        decoder_ones = torch.ones(depth_decoder_input_shape).cuda().contiguous()
 
         # print("model summary: ")
         # summary(merged, encoder_input_shape)
 
         #save to onnx
-        #torch.onnx.export(encoder, encoder_ones, os.path.join(export_path, "encoder.onnx"), verbose=True, opset_version=15)
-        #torch.onnx.export(depth_decoder, decoder_ones, os.path.join(export_path, "depth.onnx"), verbose=True) #TODO create wrapper to handle multiple inputs
+        export_file = os.path.join(export_path, model_name + ".onnx")
 
-        torch.onnx.export(merged, encoder_ones, os.path.join(export_path, "merged.onnx"), verbose=True, opset_version=15, input_names=["input"], output_names=["output"])
+        torch.onnx.export(merged, encoder_ones, export_file, verbose=True, opset_version=15, input_names=["input"], output_names=["output"])
 
         print("finished onnx export")
 
-        #convert to tensorrt
-        #encoder_trt = torch2trt(encoder, [encoder_ones])
-        #decoder_trt = torch2trt(depth_decoder, [decoder_ones]) #TODO wrapper for multiple inputs
+        print("simplifying model")
 
-        #TODO produces artificats
-        merged_trt = torch2trt(merged, [input_image], max_batch_size=4, fp16_mode=True)
+        model = onnx.load(export_file)
+        # convert model
+        model_simp, check = simplify(model)
 
-        print("finished trt export")
-
-    print("saving engine file")
-
-    merged_trt_path = os.path.join(export_path, "merged.engine")
-    with open(merged_trt_path, "wb") as f:
-        f.write(merged_trt.engine.serialize())
+        assert check, "Simplified ONNX model could not be validated"
 
 
-    print("Testing model")
+        onnx.save(model_simp, os.path.join(export_path, model_name + ".simplified.onnx"))
 
-
-
-    # TEST TENSORT MODEL
-
-    outputs = merged_trt(input_image)
-
-    disp = outputs[0]
-    disp_resized = torch.nn.functional.interpolate(
-        disp, (original_height, original_width), mode="bilinear", align_corners=False)
-
-    # Saving colormapped depth image
-    disp_resized_np = disp_resized.squeeze().cpu().numpy()
-    vmax = np.percentile(disp_resized_np, 95)
-    normalizer = mpl.colors.Normalize(vmin=disp_resized_np.min(), vmax=vmax)
-    mapper = cm.ScalarMappable(norm=normalizer, cmap='magma')
-    colormapped_im = (mapper.to_rgba(disp_resized_np)[:, :, :3] * 255).astype(np.uint8)
-    im = pil.fromarray(colormapped_im)
-    im.save("assets/test_disp.jpg")
+        print("saved simplified model")
 
     print('-> Done!')
 
 
 if __name__ == '__main__':
     args = parse_args()
-    convert_to_tensorrt(args)
+
+    encoder, depth_decoder, feed_height, feed_width = load_pretrained()
+
+    convert_to_onnx(args.model_name, encoder, depth_decoder, feed_height, feed_width)
+
