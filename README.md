@@ -9,6 +9,7 @@ Please refer to the original monodepth2 paper and github repository to find the 
 > [Clément Godard](http://www0.cs.ucl.ac.uk/staff/C.Godard/), [Oisin Mac Aodha](http://vision.caltech.edu/~macaodha/), [Michael Firman](http://www.michaelfirman.co.uk) and [Gabriel J. Brostow](http://www0.cs.ucl.ac.uk/staff/g.brostow/)
 >
 > [ICCV 2019 (arXiv pdf)](https://arxiv.org/abs/1806.01260)
+
 [Monodepth2 repository](https://github.com/nianticlabs/monodepth2)
 
 
