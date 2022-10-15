@@ -26,7 +26,7 @@ Please follow the setup described in the original mondepth2 repository
 Convert a monodepth2 model to onnx with:
 
 ```shell
-export_onnx.py --model_name=mono+stereo_640x192
+python3 export_onnx.py --model_name=mono+stereo_640x192
 ```
 This will export the onnx file for mono+stereo_640x192. All models are exported with only the first output.
 
