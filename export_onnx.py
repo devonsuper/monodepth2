@@ -16,7 +16,7 @@ import os
 import sys
 import torch
 import torch.onnx
-from torch2trt import torch2trt
+#from torch2trt import torch2trt
 from torchsummary import summary
 from torchvision import transforms, datasets
 
@@ -133,6 +133,7 @@ def convert_to_onnx(model_name, encoder, depth_decoder, height, width):
         onnx.save(model_simp, os.path.join(export_path, model_name + ".simplified.onnx"))
 
         print("saved simplified model")
+
 
     print('-> Done!')
 

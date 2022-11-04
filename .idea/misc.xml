@@ -10,15 +10,7 @@
         </OpenedFileInfo>
         <OpenedFileInfo>
           <option name="caretOffset" value="0" />
-          <option name="fileUrl" value="file://$PROJECT_DIR$/test_simple.py" />
-        </OpenedFileInfo>
-        <OpenedFileInfo>
-          <option name="caretOffset" value="0" />
           <option name="fileUrl" value="file://$PROJECT_DIR$/splits/eigen_zhou/val_files.txt" />
-        </OpenedFileInfo>
-        <OpenedFileInfo>
-          <option name="caretOffset" value="0" />
-          <option name="fileUrl" value="file://$PROJECT_DIR$/train.py" />
         </OpenedFileInfo>
         <OpenedFileInfo>
           <option name="caretOffset" value="4568" />
@@ -33,20 +25,24 @@
           <option name="fileUrl" value="file://$PROJECT_DIR$/networks/merged_model.py" />
         </OpenedFileInfo>
         <OpenedFileInfo>
-          <option name="caretOffset" value="3338" />
-          <option name="fileUrl" value="file://$PROJECT_DIR$/export_onnx.py" />
-        </OpenedFileInfo>
-        <OpenedFileInfo>
           <option name="caretOffset" value="0" />
           <option name="fileUrl" value="file://$PROJECT_DIR$/networks/ncf_depth_decoder.py" />
         </OpenedFileInfo>
         <OpenedFileInfo>
-          <option name="caretOffset" value="1474" />
+          <option name="caretOffset" value="1475" />
           <option name="fileUrl" value="file://$PROJECT_DIR$/README.md" />
         </OpenedFileInfo>
         <OpenedFileInfo>
-          <option name="caretOffset" value="3248" />
+          <option name="caretOffset" value="3212" />
           <option name="fileUrl" value="file://$PROJECT_DIR$/runonnx.py" />
+        </OpenedFileInfo>
+        <OpenedFileInfo>
+          <option name="caretOffset" value="721" />
+          <option name="fileUrl" value="file://$PROJECT_DIR$/export_onnx.py" />
+        </OpenedFileInfo>
+        <OpenedFileInfo>
+          <option name="caretOffset" value="1566" />
+          <option name="fileUrl" value="file://$PROJECT_DIR$/onnx_to_tflite.py" />
         </OpenedFileInfo>
       </list>
     </option>
