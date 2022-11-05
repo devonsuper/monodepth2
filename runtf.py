@@ -41,35 +41,7 @@ print(dims)
 feed_height = int( dims[0] )
 feed_width = int ( dims[1] )
 
-onnx_model_path = "exports/" + args.model_name + "/" + args.model_name + ".simplified.onnx"
-print(onnx_model_path)
-
-onnx_model = onnx.load(onnx_model_path)
-tf_rep = prepare(onnx_model)
-
-tf_model_path = "exports/" + args.model_name + "/" + args.model_name + ".tensorflow"
-
-tf_rep.export_graph(tf_model_path)
 
 model = tf.saved_model.load(tf_model_path)
 model.trainable = False
 
-#input_tensor = tf.random.uniform([1, 3, feed_height, feed_width])
-#out = model(**{'serving_default_input': input_tensor})
-
-# Convert the model
-converter = tf.lite.TFLiteConverter.from_saved_model(tf_model_path)
-converter.target_spec.supported_types = [tf.float32]
-
-converter.target_spec.supported_ops = [
-  tf.lite.OpsSet.TFLITE_BUILTINS, # enable TensorFlow Lite ops.
-  tf.lite.OpsSet.SELECT_TF_OPS # enable TensorFlow ops.
-]
-
-tflite_model = converter.convert()
-
-tflite_model_path = "exports/" + args.model_name + "/" + args.model_name + ".tflite"
-
-# Save the model
-with open(tflite_model_path, 'wb') as f:
-    f.write(tflite_model)

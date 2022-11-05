@@ -106,7 +106,7 @@ def convert_to_onnx(model_name, encoder, depth_decoder, height, width):
         merged = networks.MergedModel(encoder, depth_decoder, 0) #MergedModels executes the second model with the output of the first
 
         #load input shapes
-        encoder_input_shape = (1, 3, height, width) #tuple(next(encoder.parameters()).size())
+        encoder_input_shape = (1, 3, height, width ) #tuple(next(encoder.parameters()).size())
 
         # example data to feed conversion
         encoder_ones = torch.ones(encoder_input_shape).cuda().contiguous()

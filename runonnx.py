@@ -39,7 +39,7 @@ def parse_args():
 
 def main(args):
 
-    device = torch.device("cuda")
+    device = torch.device("cpu")
 
     download_model_if_doesnt_exist(args.model_name)
     model_path = os.path.join("models", args.model_name)
@@ -84,7 +84,7 @@ def main(args):
 
     #run onnx
 
-    ort_sess = ort.InferenceSession("exports/" + args.model_name + "/" + args.model_name + "simplified.onnx", providers=['TensorrtExecutionProvider', 'CUDAExecutionProvider', 'CPUExecutionProvider'])
+    ort_sess = ort.InferenceSession("exports/" + args.model_name + "/" + args.model_name + ".simplified.onnx", providers=[ 'CPUExecutionProvider'])
     outputs = ort_sess.run(None, {'input': input_image.numpy()})
 
     #test image
