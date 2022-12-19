@@ -5,40 +5,27 @@
     <option name="openedFilesInfos">
       <list>
         <OpenedFileInfo>
-          <option name="caretOffset" value="4568" />
-          <option name="fileUrl" value="file://$PROJECT_DIR$/trainer.py" />
-        </OpenedFileInfo>
-        <OpenedFileInfo>
-          <option name="caretOffset" value="0" />
-          <option name="fileUrl" value="file://$PROJECT_DIR$/splits/kitti_archives_to_download.txt" />
-        </OpenedFileInfo>
-        <OpenedFileInfo>
-          <option name="caretOffset" value="3355" />
-          <option name="fileUrl" value="file://$PROJECT_DIR$/runonnx.py" />
-        </OpenedFileInfo>
-        <OpenedFileInfo>
-          <option name="fileUrl" value="file://$PROJECT_DIR$/assets/test_image.jpg" />
-        </OpenedFileInfo>
-        <OpenedFileInfo>
-          <option name="fileUrl" value="file://$PROJECT_DIR$/assets/onnx_disp.jpg" />
-        </OpenedFileInfo>
-        <OpenedFileInfo>
-          <option name="caretOffset" value="1954" />
+          <option name="caretOffset" value="1603" />
           <option name="fileUrl" value="file://$PROJECT_DIR$/onnx_to_tflite.py" />
-        </OpenedFileInfo>
-        <OpenedFileInfo>
-          <option name="caretOffset" value="1692" />
-          <option name="fileUrl" value="file://$PROJECT_DIR$/runtflite.py" />
         </OpenedFileInfo>
         <OpenedFileInfo>
           <option name="fileUrl" value="file://$PROJECT_DIR$/assets/0.png" />
         </OpenedFileInfo>
         <OpenedFileInfo>
-          <option name="fileUrl" value="file://$PROJECT_DIR$/assets/tflite_disp.jpg" />
+          <option name="caretOffset" value="1769" />
+          <option name="fileUrl" value="file://$PROJECT_DIR$/export_onnx.py" />
         </OpenedFileInfo>
         <OpenedFileInfo>
-          <option name="caretOffset" value="4414" />
-          <option name="fileUrl" value="file://$PROJECT_DIR$/export_onnx.py" />
+          <option name="caretOffset" value="4940" />
+          <option name="fileUrl" value="file://$PROJECT_DIR$/runonnx.py" />
+        </OpenedFileInfo>
+        <OpenedFileInfo>
+          <option name="caretOffset" value="5397" />
+          <option name="fileUrl" value="file://$PROJECT_DIR$/test_simple.py" />
+        </OpenedFileInfo>
+        <OpenedFileInfo>
+          <option name="caretOffset" value="2819" />
+          <option name="fileUrl" value="file://$PROJECT_DIR$/runtflite.py" />
         </OpenedFileInfo>
       </list>
     </option>

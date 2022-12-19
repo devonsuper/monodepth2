@@ -1,14 +1,5 @@
-import onnx
-from onnx_tf.backend import prepare
 import tensorflow as tf
 import argparse
-import torch
-
-import PIL.Image as pil
-from torchvision import transforms, datasets
-import numpy as np
-import matplotlib as mpl
-import matplotlib.cm as cm
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -36,14 +27,8 @@ args = parse_args()
 
 assert args.model_name, "must choose model"
 
-dims = args.model_name.split("_")[-1].split("x")
-print(dims)
-feed_height = int( dims[0] )
-feed_width = int ( dims[1] )
-
-tf_model_path = "./exports/" + args.model_name + "/" + args.model_name + ".tensorflow"
-
-
-model = tf.saved_model.load(tf_model_path)
-
-model.summary()
+saved_model_dir='exports/' + args.model_name + "/" + args.model_name + ".tensorflow"
+converter = tf.lite.TFLiteConverter.from_saved_model(saved_model_dir)
+converter.optimizations = [tf.lite.Optimize.DEFAULT]
+tf_lite_model = converter.convert()
+open("exports/" + args.model_name + "/" + args.model_name + ".tflite", 'wb').write(tf_lite_model)

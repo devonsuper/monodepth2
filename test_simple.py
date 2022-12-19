@@ -90,7 +90,7 @@ def test_simple(args):
     encoder.eval()
 
     print("   Loading pretrained decoder")
-    depth_decoder = networks.DepthDecoder(
+    depth_decoder = networks.NCFDepthDecoder(
         num_ch_enc=encoder.num_ch_enc, scales=range(4))
 
     loaded_dict = torch.load(depth_decoder_path, map_location=device)

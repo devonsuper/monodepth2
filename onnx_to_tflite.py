@@ -10,6 +10,8 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.cm as cm
 
+import os
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description='Simple conversion for mondepth2 models.')
@@ -32,44 +34,53 @@ def parse_args():
 
     return parser.parse_args()
 
-args = parse_args()
+def onnx_to_tflite(model_name, feed_height, feed_width):
 
-assert args.model_name, "must choose model"
+    onnx_model_path = "exports/" + args.model_name + "/" + args.model_name + ".simplified.onnx"
+    print(onnx_model_path)
 
-dims = args.model_name.split("_")[-1].split("x")
-print(dims)
-feed_height = int( dims[0] )
-feed_width = int ( dims[1] )
+    onnx_model = onnx.load(onnx_model_path)
+    tf_rep = prepare(onnx_model)
 
-onnx_model_path = "exports/" + args.model_name + "/" + args.model_name + ".simplified.onnx"
-print(onnx_model_path)
+    tf_model_path = "exports/" + args.model_name + "/" + args.model_name + ".tensorflow"
 
-onnx_model = onnx.load(onnx_model_path)
-tf_rep = prepare(onnx_model)
+    tf_rep.export_graph(tf_model_path)
 
-tf_model_path = "exports/" + args.model_name + "/" + args.model_name + ".tensorflow"
+    model = tf.saved_model.load(tf_model_path)
+    model.trainable = False
 
-tf_rep.export_graph(tf_model_path)
+    # input_tensor = tf.random.uniform([1, 3, feed_height, feed_width])
+    # out = model(**{'serving_default_input': input_tensor})
 
-model = tf.saved_model.load(tf_model_path)
-model.trainable = False
+    # Convert the model
+    converter = tf.lite.TFLiteConverter.from_saved_model(tf_model_path)
+    converter.target_spec.supported_types = [tf.float32]
+    converter.experimental_new_converter = True
 
-#input_tensor = tf.random.uniform([1, 3, feed_height, feed_width])
-#out = model(**{'serving_default_input': input_tensor})
+    converter.target_spec.supported_ops = [
+      tf.lite.OpsSet.TFLITE_BUILTINS, # enable TensorFlow Lite ops.
+      #tf.lite.OpsSet.SELECT_TF_OPS # enable TensorFlow ops.
+    ]
 
-# Convert the model
-converter = tf.lite.TFLiteConverter.from_saved_model(tf_model_path)
-converter.target_spec.supported_types = [tf.float32]
+    tflite_model = converter.convert()
 
-converter.target_spec.supported_ops = [
-  tf.lite.OpsSet.TFLITE_BUILTINS, # enable TensorFlow Lite ops.
-  tf.lite.OpsSet.SELECT_TF_OPS # enable TensorFlow ops.
-]
+    tflite_model_path = "exports/" + args.model_name + "/" + args.model_name + ".tflite"
 
-tflite_model = converter.convert()
+    # Save the model
+    with open(tflite_model_path, 'wb') as f:
+        f.write(tflite_model)
 
-tflite_model_path = "exports/" + args.model_name + "/" + args.model_name + ".tflite"
 
-# Save the model
-with open(tflite_model_path, 'wb') as f:
-    f.write(tflite_model)
+if __name__ == "__main__":
+    args = parse_args()
+
+    assert args.model_name, "must choose model"
+
+    os.environ['CUDA_VISIBLE_DEVICES'] = "0"
+
+    dims = args.model_name.split("_")[-1].split("x")
+    print(dims)
+    feed_height = int(dims[0])
+    feed_width = int(dims[1])
+
+    onnx_to_tflite(args.model_name, feed_height, feed_width)
