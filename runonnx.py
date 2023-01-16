@@ -109,8 +109,8 @@ def main(args):
 
         #run onnx
 
-        ort_sess = ort.InferenceSession("exports/" + args.model_name + "/" + args.model_name + ".simplified.onnx", providers=[ 'CPUExecutionProvider'])
-        outputs = ort_sess.run(None, {'input': input_image.numpy()})
+        ort_sess = ort.InferenceSession("exports/" + args.model_name + "/" + args.model_name + "-constant_pad.simplified.onnx", providers=[ 'CPUExecutionProvider'])
+        outputs = ort_sess.run(["output"], {'input': input_image.numpy()})
 
         #test image
 

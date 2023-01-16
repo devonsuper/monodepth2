@@ -149,8 +149,6 @@ def convert_to_onnx(model_name, encoder, depth_decoder, height, width):
 
         onnx.save(gs.export_onnx(graph), os.path.join(export_path, model_name + ".simplified.gs.onnx"))
 
-        graph
-
     print('-> Done!')
 
 
