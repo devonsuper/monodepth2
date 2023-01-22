@@ -123,6 +123,7 @@ def convert_to_onnx(model_name, encoder, depth_decoder, height, width):
         #save to onnx
         export_file = os.path.join(export_path, model_name + ".onnx")
 
+        torch.save(merged, os.path.join("models", model_name + model_name + ".pth"))
         torch.onnx.export(merged, encoder_ones, export_file, verbose=True, opset_version=11, input_names=["input"], output_names=["output"])
 
         print("finished onnx export")

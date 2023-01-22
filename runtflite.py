@@ -80,9 +80,20 @@ for idx, image_path in enumerate(paths):
     original_width, original_height = input_image.size
     #input_image = input_image.resize((feed_width, feed_height), pil.LANCZOS)
 
-    img = cv2.imread(image_path)
-    img = (cv2.resize(img, (feed_width, feed_height)).astype(np.float32).transpose(2,1,0)/255)#transpose((1,0,2))/255)
+    # img = cv2.imread(image_path)
+    # img = (cv2.resize(img, (feed_width, feed_height)).astype(np.float32).transpose(2,1,0)/255)#transpose((1,0,2))/255)
 
+    preprocess = transforms.Compose([
+        transforms.Resize((320, 1024)),
+        # transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
+
+    input_tensor = preprocess(input_image)
+
+    img = input_tensor.unsqueeze(0).numpy()
 
     output = interpreter.get_output_details()[0]  # Model has single output.
     input = interpreter.get_input_details()[0]  # Model has single input.
@@ -94,7 +105,7 @@ for idx, image_path in enumerate(paths):
     print(input["shape"])
     print(img.shape)
 
-    interpreter.set_tensor(input['index'], [img])
+    interpreter.set_tensor(input['index'], img)
     interpreter.invoke()
     outputs = interpreter.get_tensor(output['index'])
 
